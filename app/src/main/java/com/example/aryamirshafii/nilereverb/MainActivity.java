@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter myBluetooth;
     private Musicmanager songManager;
     private boolean isRegistered = false;
+    private BluetoothController bluetoothController;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,7 +50,9 @@ public class MainActivity extends AppCompatActivity {
                 songManager.playHotelCalifornia();
             }
         });
-
+        bluetoothController = new BluetoothController(getApplicationContext(),bluetoothStatusLabel);
+        //bluetoothController.connect();
+        bluetoothController.read();
 
 
     }
