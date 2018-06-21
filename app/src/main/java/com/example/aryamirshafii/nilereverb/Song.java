@@ -3,7 +3,7 @@ package com.example.aryamirshafii.nilereverb;
 import android.content.ContentUris;
 import android.net.Uri;
 
-public class Song {
+public class Song  {
     long id;
     String artist;
     String title;

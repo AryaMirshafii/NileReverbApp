@@ -29,6 +29,8 @@ public class MainActivity extends AppCompatActivity {
     private Musicmanager songManager;
     private boolean isRegistered = false;
     private BluetoothController bluetoothController;
+
+    private weatherManager weatherController;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,24 +39,34 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         bluetoothStatusLabel = findViewById(R.id.bluetoothLabel);
 
-
+        weatherController = new weatherManager(getApplicationContext());
 
 
         Button closingButton = (Button) findViewById(R.id.playButton);
-
+        bluetoothController = new BluetoothController(getApplicationContext());
         // Set a click listener for the popup window close button
         closingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                System.out.println("Playing Hotel California");
-                songManager.playHotelCalifornia();
+                System.out.println("Button Pressed");
+                weatherController.getWeather();
+                //bluetoothController.write("Hi arya");
             }
         });
-        bluetoothController = new BluetoothController(getApplicationContext(),bluetoothStatusLabel);
+
+
+        //UNcomment these
         //bluetoothController.connect();
-        bluetoothController.read();
+        //bluetoothController.read();
 
 
+    }
+
+
+    private void testSongmanager(){
+        songManager.playSong("Jumpin Jack Flash");
+        songManager.playArtist("foreigner");
+        songManager.printTest("Sgt. Pepper's Lonely Hearts Club Band");
     }
 
 

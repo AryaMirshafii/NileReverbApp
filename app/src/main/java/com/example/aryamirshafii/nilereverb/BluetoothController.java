@@ -23,18 +23,24 @@ public class BluetoothController {
     private Context context;
     private TextView label;
     private UUID uuid;
+    private CommandController commandController;
+    private String packetString;
 
-    public BluetoothController(Context appContext, TextView bluetoothLabel){
+    public BluetoothController(Context appContext){
         this.context = appContext;
         this.rxBleClient = RxBleClient.create(appContext);
-        this.label = bluetoothLabel;
+
         uuid =  UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB");
         //uuid =  UUID.fromString("FFE1");
-        checkBluetooth();
+        commandController = new CommandController(context);
+        //checkBluetooth();
 
+        packetString = "";
 
 
     }
+
+
 
 
     private void checkBluetooth(){
@@ -46,7 +52,7 @@ public class BluetoothController {
     }
 
     public void connect(){
-        //"AA:BB:CC:DD:EE:FF";
+
         String address = "C8:DF:84:2A:56:13";
         RxBleDevice device = rxBleClient.getBleDevice(address);
 
@@ -72,26 +78,95 @@ public class BluetoothController {
 
     @SuppressLint("CheckResult")
     public void read(){
-
+        System.out.println("Starting Connection");
         String address = "C8:DF:84:2A:56:13";
 
         RxBleDevice device = rxBleClient.getBleDevice(address);
         device.establishConnection(false)
                 .flatMap(rxBleConnection -> rxBleConnection.setupNotification(uuid))
                 .doOnNext(notificationObservable -> {
-                    // Notification has been set up
+
                 })
                 .flatMap(notificationObservable -> notificationObservable) // <-- Notification has been set up, now observe value changes.
                 .subscribe(
                         bytes -> {
 
                             String encodedString = new String(bytes, StandardCharsets.UTF_8);
-                            System.out.println("BYTes is" + encodedString);
+                            encodedString = encodedString.trim();
+                            if(!encodedString.equals("nothing")){
+                                System.out.println("Executing command.....");
+                                ensurePacket(encodedString);
+                            }
+
+
+
+                        },
+                        throwable -> {
+                            System.out.println("An error occured");
+                            throwable.printStackTrace();
+                            connect();
+                        }
+                );
+    }
+
+    /**
+     * A function that writes values to the bluetooth module
+     * @param message the message to be sent to the bluetooth
+     */
+    @SuppressLint("CheckResult")
+    public void write(String message){
+        byte[] byteArray = message.getBytes();
+        String address = "C8:DF:84:2A:56:13";
+
+        RxBleDevice device = rxBleClient.getBleDevice(address);
+        device.establishConnection(false)
+                .flatMap(rxBleConnection -> rxBleConnection.createNewLongWriteBuilder()
+                        .setCharacteristicUuid(uuid)
+
+                        .setBytes(byteArray)
+
+                        .build()
+                )
+                .subscribe(
+                        bytes -> {
+                            // Written data.
                         },
                         throwable -> {
                             throwable.printStackTrace();
+                            System.out.println("Wrote unsuccessfully");
                         }
                 );
+    }
+
+
+    /**
+     * A function that ensures that the data recieved from bluetooth is complete
+     * I.E starts and ends with "_" in order to ensure a complete string of data.
+     * @param commandString
+     */
+    private void ensurePacket(String commandString){
+        System.out.println("command string is" + commandString);
+
+        if(commandString.startsWith("_") && commandString.endsWith("_") && commandString.length() > 3){
+            //Case 1 complete packet with front and end "_"
+            System.out.println("Case 1");
+            commandController.doCommand(commandString);
+        }else if(commandString.startsWith("_")  && packetString.length() == 0){
+            //Case 2 complete packet with front of "_"
+            packetString = commandString;
+            System.out.println("Case 2  "+ packetString);
+        }else if(commandString.endsWith("_")){
+            //Case 2 complete packet with end of "_"
+            System.out.println("Case 3");
+            packetString += commandString;
+            packetString = packetString.replace("_","");
+            commandController.doCommand(packetString);
+            packetString = "";
+
+        }else{
+            System.out.println("Case 4");
+            packetString += commandString;
+        }
     }
 
 
