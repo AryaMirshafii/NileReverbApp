@@ -46,7 +46,7 @@ public class stringSearch {
 
         // if true, then no common substring exists
         if (len == 0) {
-            System.out.println("No Common Substring");
+            //System.out.println("No Common Substring");
             return "";
         }
 

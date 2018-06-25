@@ -21,6 +21,7 @@ public class dataController {
     private Context context;
 
     private String shuffleStateFile = "shuffleState.txt";
+    private String weatherFile = "weather.txt";
 
     public dataController(Context context){
         this.context = context;
@@ -28,20 +29,10 @@ public class dataController {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    /**
+     * A function that saves the shuffle state to a text file
+     * @param shuffleState the shuffle state either true or false
+     */
 
     public void setShuffleState(Boolean shuffleState){
         String shuffle = shuffleState.toString();
@@ -56,6 +47,11 @@ public class dataController {
         }
 
     }
+
+    /**
+     * returns the shuffle state
+     * @return
+     */
     public Boolean getShuffleState(){
         FileInputStream fis;
         int n;
@@ -81,6 +77,52 @@ public class dataController {
         return false;
 
     }
+
+
+
+    public void setWeather(String weather){
+
+        FileOutputStream outputStream;
+
+        try {
+            outputStream = context.openFileOutput(weatherFile , Context.MODE_PRIVATE);
+            outputStream.write(weather.toString().getBytes());
+            outputStream.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+
+
+
+    public String getWeather(){
+        FileInputStream fis;
+        int n;
+        try {
+            fis = context.openFileInput(weatherFile);
+            StringBuffer fileContent = new StringBuffer("");
+
+            byte[] buffer = new byte[1024];
+
+
+
+            while ((n = fis.read(buffer)) != -1)
+            {
+                fileContent.append(new String(buffer, 0, n));
+            }
+
+            return fileContent.toString();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return "";
+
+    }
+
 
 
 

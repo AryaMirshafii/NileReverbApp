@@ -42,7 +42,9 @@ public class weatherManager implements LocationListener{
     private LocationManager locationManager;
     private LocationListener locationListener;
 
-    private BluetoothController bluetoothController;
+    private dataController DataManager;
+
+
 
     public weatherManager(Context aContext){
         this.context = aContext;
@@ -56,7 +58,9 @@ public class weatherManager implements LocationListener{
 
         this.isLocationEnabled();
 
-        bluetoothController = new BluetoothController(context);
+        //bluetoothController = new BluetoothController(context);
+        DataManager = new dataController(context);
+        getWeather();
 
 
     }
@@ -122,7 +126,7 @@ public class weatherManager implements LocationListener{
                 String requestString = "http://api.openweathermap.org/data/2.5/weather?q=" + address.getLocality().trim() + keyRequest;
                 requestString = requestString.trim();
                 try {
-                    getDataFromURL(requestString);
+                    getDataFromURL(requestString, address.getLocality().trim());
                     System.out.println("THe data is");
                     //System.out.println(data);
                 } catch (IOException e) {
@@ -140,7 +144,7 @@ public class weatherManager implements LocationListener{
 
     }
 
-    public void getDataFromURL(String urlString) throws IOException, JSONException {
+    public void getDataFromURL(String urlString, String address) throws IOException, JSONException {
 
         AndroidNetworking.get(urlString)
                 .addPathParameter("pageNumber", "0")
@@ -163,17 +167,22 @@ public class weatherManager implements LocationListener{
                             System.out.println("THe trimmed string is " + first);
 
 
-                            double Fahrenheit = (Double.parseDouble(first) *  9/5) - 459.67;
-
-
-                            System.out.println("THe temp  is " + Fahrenheit);
+                            Double finalTemp =  ((Double.parseDouble(first) *  9/5) - 459.6700);
 
 
 
+                            System.out.println("THe temp  is " + finalTemp);
 
 
 
-                            weatherManager.this.bluetoothController.write("_TIN" + Fahrenheit +"_");
+
+
+
+                            //weatherManager.this.bluetoothController.write("_UpdateW" + Fahrenheit +"_");
+                            DataManager.setWeather(
+                                    Integer.toString(finalTemp.intValue())
+                                    + "," + address
+                            );
 
 
 

@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.util.Base64;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.polidea.rxandroidble2.RxBleClient;
@@ -25,6 +26,9 @@ public class BluetoothController {
     private UUID uuid;
     private CommandController commandController;
     private String packetString;
+    private Disposable connectionDisposable;
+    private String address = "C8:DF:84:2A:56:13";
+    private String currentCommand ="";
 
     public BluetoothController(Context appContext){
         this.context = appContext;
@@ -36,6 +40,7 @@ public class BluetoothController {
         //checkBluetooth();
 
         packetString = "";
+        read();
 
 
     }
@@ -51,38 +56,17 @@ public class BluetoothController {
         }
     }
 
-    public void connect(){
 
-        String address = "C8:DF:84:2A:56:13";
-        RxBleDevice device = rxBleClient.getBleDevice(address);
-
-
-        Disposable disposable = device.establishConnection(false) // <-- autoConnect flag
-                .subscribe(
-                        rxBleConnection -> {
-                            // All GATT operations are done through the rxBleConnection.
-                            System.out.println("I am connected to " + device.getBluetoothDevice().getUuids());
-                            label.setText("Connected to Nile Reverb");
-                            //read();
-                        },
-                        throwable -> {
-                            // Handle an error here.
-                            System.out.println("I am not connected");
-                        }
-                );
-
-        // When done... dispose and forget about connection teardown :)
-        //disposable.dispose();
-    }
 
 
     @SuppressLint("CheckResult")
     public void read(){
         System.out.println("Starting Connection");
-        String address = "C8:DF:84:2A:56:13";
+
 
         RxBleDevice device = rxBleClient.getBleDevice(address);
-        device.establishConnection(false)
+
+        connectionDisposable =  device.establishConnection(false)
                 .flatMap(rxBleConnection -> rxBleConnection.setupNotification(uuid))
                 .doOnNext(notificationObservable -> {
 
@@ -93,7 +77,7 @@ public class BluetoothController {
 
                             String encodedString = new String(bytes, StandardCharsets.UTF_8);
                             encodedString = encodedString.trim();
-                            if(!encodedString.equals("nothing")){
+                            if(!encodedString.equals("")){
                                 System.out.println("Executing command.....");
                                 ensurePacket(encodedString);
                             }
@@ -104,7 +88,7 @@ public class BluetoothController {
                         throwable -> {
                             System.out.println("An error occured");
                             throwable.printStackTrace();
-                            connect();
+
                         }
                 );
     }
@@ -115,11 +99,28 @@ public class BluetoothController {
      */
     @SuppressLint("CheckResult")
     public void write(String message){
+
+
+
+        if(message.charAt(0) != '_'){
+            message = "_" + message;
+        }
+
+        if(message.charAt(message.length() -1) != '_'){
+            message += '_';
+        }
+
         byte[] byteArray = message.getBytes();
-        String address = "C8:DF:84:2A:56:13";
+
 
         RxBleDevice device = rxBleClient.getBleDevice(address);
-        device.establishConnection(false)
+
+        if(connectionDisposable != null){
+            System.out.println("Disposing disposable");
+            //connectionDisposable.dispose();
+        }
+
+        connectionDisposable = device.establishConnection(false)
                 .flatMap(rxBleConnection -> rxBleConnection.createNewLongWriteBuilder()
                         .setCharacteristicUuid(uuid)
 
@@ -136,6 +137,9 @@ public class BluetoothController {
                             System.out.println("Wrote unsuccessfully");
                         }
                 );
+
+        connectionDisposable.dispose();
+        read();
     }
 
 
@@ -145,12 +149,22 @@ public class BluetoothController {
      * @param commandString
      */
     private void ensurePacket(String commandString){
+        if(currentCommand.trim().equals(commandString.trim())){
+            Log.d("Ensuring Packet", "returning from packet");
+            System.out.println("returning from packet");
+            return;
+        }
         System.out.println("command string is" + commandString);
 
         if(commandString.startsWith("_") && commandString.endsWith("_") && commandString.length() > 3){
             //Case 1 complete packet with front and end "_"
             System.out.println("Case 1");
-            commandController.doCommand(commandString);
+
+            if(!currentCommand.trim().equals(commandString.trim())){
+                currentCommand = commandString.trim();
+                write(commandController.doCommand(commandString));
+            }
+
         }else if(commandString.startsWith("_")  && packetString.length() == 0){
             //Case 2 complete packet with front of "_"
             packetString = commandString;
@@ -160,7 +174,10 @@ public class BluetoothController {
             System.out.println("Case 3");
             packetString += commandString;
             packetString = packetString.replace("_","");
-            commandController.doCommand(packetString);
+            if(!currentCommand.equals(commandString)){
+                currentCommand = commandString.trim();
+                write(commandController.doCommand(packetString));
+            }
             packetString = "";
 
         }else{

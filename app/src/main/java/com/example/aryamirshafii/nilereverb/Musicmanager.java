@@ -37,6 +37,13 @@ public class Musicmanager {
 
     private MediaPlayer mediaPlayer;
 
+    private String currentPlayingSong;
+
+
+
+
+
+
 
 
     private HashMap<String, Song[]> genreMap;
@@ -50,6 +57,7 @@ public class Musicmanager {
         genreMap = new HashMap<>();
         mediaPlayer = new MediaPlayer();
         albumMap = new HashMap<>();
+
     }
 
 
@@ -156,15 +164,19 @@ public class Musicmanager {
 
     }
 
-    public void playSong(String songName){
+    public String playSong(String songName){
+        if(currentPlayingSong != null && currentPlayingSong.trim().equals(songName.trim())){
+            return "This song is already playing";
+        }
         songName = songName.replaceAll("[^A-Za-z]+", "").toLowerCase();
         System.out.println("The Song name is" + songName);
         if (mySongs.size() <= 0){
             System.out.println("NO song found");
-            return;
+            return "No songs on device";
         }
         int maxLength = 0;
         Uri theUri = Uri.parse("");
+        String displayMessage = "";
         for(Song aSong : mySongs){
             String songTitle = aSong.title.replaceAll("[^A-Za-z]+", "").toLowerCase();
             if(stringSearcher.lcs(songTitle,songName).length() == songName.length()){
@@ -172,11 +184,16 @@ public class Musicmanager {
                 theUri = aSong.getURI();
                 maxLength = 0;
                 playFile((theUri));
-                return;
+
+                displayMessage = "Playing " + aSong.title;
+                currentPlayingSong = aSong.title;
+                return displayMessage;
 
 
             }else if(stringSearcher.lcs(songTitle,songName).length() >maxLength){
                 theUri = aSong.getURI();
+                displayMessage = "Playing " + aSong.title;
+                currentPlayingSong = aSong.title;
                 maxLength = stringSearcher.lcs(songTitle,songName).length();
             }
 
@@ -186,16 +203,27 @@ public class Musicmanager {
         }
 
 
-        playFile((theUri));
-        maxLength = 0;
 
+
+        if(!theUri.equals(Uri.parse(""))  && !displayMessage.equals("")){
+            playFile((theUri));
+            return displayMessage;
+        }
+
+
+
+
+
+        maxLength = 0;
+        return "No song found";
 
 
     }
 
     private void playFile(Uri theUri){
         if(!theUri.equals(Uri.parse("")) ){
-
+            mediaPlayer.pause();
+            mediaPlayer.reset();
             //System.out.println("My URI is " + myUri);
             mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
 
@@ -204,6 +232,7 @@ public class Musicmanager {
 
                 mediaPlayer.setDataSource(mContext, theUri);
                 mediaPlayer.prepare();
+                mediaPlayer.start();
 
             }catch (IOException e) {
                 e.printStackTrace();
@@ -246,15 +275,34 @@ public class Musicmanager {
     }
 
 
-    public void playArtist(String artistName){
+    public String playArtist(String artistName){
+        String originalArtistName = artistName;
 
         artistName = artistName.replaceAll("[^A-Za-z]+", "").toLowerCase();
 
+
+        /**
+         * checking if the name of the group needs a the in front
+         * For example nobody says "play some the beatles" or "play some the rolling stones"
+         * Most would say "play some beatles" or "play some rolling stones"
+         */
         if(!artistMap.containsKey(artistName)){
-            System.out.println("The key doesnt exist");
-            return;
+            System.out.println("The key doesnt exist. Appending the");
+
+            if(!artistMap.containsKey("the" + artistName)){
+                System.out.println("The key doesnt exist.");
+
+                return "The artist cannot be found";
+            }else {
+                artistName = "the" +artistName;
+                originalArtistName = "The" + originalArtistName;
+
+            }
+
+
         }
         Song[] songs = artistMap.get(artistName);
+
         Random random = new Random();
         Uri randomUri  =  songs[random.nextInt(songs.length )].getURI();
         playFile(randomUri);
@@ -292,6 +340,9 @@ public class Musicmanager {
 
             }
         });
+
+        return "Playing music from " + originalArtistName;
+
     }
 
 
@@ -344,6 +395,10 @@ public class Musicmanager {
             }
         });
     }
+
+
+
+    
 
 
 
