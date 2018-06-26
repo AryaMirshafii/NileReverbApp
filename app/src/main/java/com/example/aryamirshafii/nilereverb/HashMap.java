@@ -6,14 +6,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-/**
- * Your implementation of HashMap.
- * 
- * @author Arya Mirshafii
- * @userid amirshafii3
- * @GTID 903252836
- * @version 1.0
- */
+
 public class HashMap<K, V> implements HashMapInterface<K, V> {
 
     // Do not make any new instance variables.
