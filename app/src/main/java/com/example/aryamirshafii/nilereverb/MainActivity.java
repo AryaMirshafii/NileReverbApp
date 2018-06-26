@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothAdapter myBluetooth;
     private Musicmanager songManager;
     private boolean isRegistered = false;
-    private improvedBluetooth bluetoothController;
+    private BluetoothController bluetoothController;
 
     private weatherManager weatherController;
     @Override
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         Button closingButton = (Button) findViewById(R.id.playButton);
-        bluetoothController = new improvedBluetooth(getApplicationContext());
+        bluetoothController = new BluetoothController(getApplicationContext());
         // Set a click listener for the popup window close button
         closingButton.setOnClickListener(new View.OnClickListener() {
             @Override

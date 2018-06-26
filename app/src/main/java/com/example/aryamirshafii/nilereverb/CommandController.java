@@ -2,6 +2,7 @@ package com.example.aryamirshafii.nilereverb;
 
 import android.content.ContentResolver;
 import android.content.Context;
+import android.os.Handler;
 
 import java.util.ArrayList;
 
@@ -10,12 +11,17 @@ public class CommandController {
     private Musicmanager songManager;
     private String nowPlayingSongName;
     private String currentCommand = "";
+    private weatherManager weatherController;
+    private dataController dataManager;
 
 
 
     public CommandController(Context context){
         songManager = new Musicmanager(context.getContentResolver(),context);
         songManager.prepare();
+        weatherController = new weatherManager(context);
+        dataManager = new dataController(context);
+        //weatherController.getWeather();
 
     }
 
@@ -26,11 +32,7 @@ public class CommandController {
      */
     public String doCommand(String command){
         //System.out.println("Current Command is :" + currentCommand +" And the new one is" + command);
-        if(currentCommand.trim().equals(command.trim())){
-            System.out.println("Repeat Command Detected");
-            return "Redundant Command";
-        }
-        currentCommand = command;
+
         command = command.trim().toLowerCase();
         System.out.println("doing command  " + command);
         if(command.contains("play")){
@@ -47,6 +49,21 @@ public class CommandController {
 
             }
         }
+
+        if(command.contains("weather")){
+            weatherController.getWeather();
+            try {
+                //set time in mili
+                Thread.sleep(3000);
+
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+
+
+            return "UpdateW" + dataManager.getWeather();
+        }
+
 
 
 //        if(command.equals("play Hotel California") && nowPlayingSongName == null){

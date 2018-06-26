@@ -31,11 +31,11 @@ public class improvedBluetooth {
 
 
     private RxBleConnection bleConnection;
-    private boolean isConnected = false;
     private io.reactivex.Observable<RxBleConnection> connectionObservable;
     private PublishSubject<Boolean> disconnectTriggerSubject = PublishSubject.create();
-    private String currentCommand ="";
     private Disposable connectionDisposable;
+
+
     public improvedBluetooth(Context appContext){
         this.context = appContext;
         this.rxBleClient = RxBleClient.create(appContext);
@@ -167,21 +167,14 @@ public class improvedBluetooth {
      * @param commandString
      */
     private void ensurePacket(String commandString){
-        if(currentCommand.trim().equals(commandString.trim())){
-            Log.d("Ensuring Packet", "returning from packet");
-            System.out.println("returning from packet");
-            return;
-        }
+
         System.out.println("command string is" + commandString);
 
         if(commandString.startsWith("_") && commandString.endsWith("_") && commandString.length() > 3){
             //Case 1 complete packet with front and end "_"
             System.out.println("Case 1");
 
-            if(!currentCommand.trim().equals(commandString.trim())){
-                currentCommand = commandString.trim();
-                write(commandController.doCommand(commandString));
-            }
+            write(commandController.doCommand(commandString));
 
         }else if(commandString.startsWith("_")  && packetString.length() == 0){
             //Case 2 complete packet with front of "_"
@@ -192,10 +185,7 @@ public class improvedBluetooth {
             System.out.println("Case 3");
             packetString += commandString;
             packetString = packetString.replace("_","");
-            if(!currentCommand.equals(commandString)){
-                currentCommand = commandString.trim();
-                write(commandController.doCommand(packetString));
-            }
+            write(commandController.doCommand(packetString));
             packetString = "";
 
         }else{
