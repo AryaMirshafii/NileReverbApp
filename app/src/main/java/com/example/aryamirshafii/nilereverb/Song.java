@@ -4,11 +4,11 @@ import android.content.ContentUris;
 import android.net.Uri;
 
 public class Song  {
-    long id;
-    String artist;
-    String title;
-    String album;
-    long duration;
+    private long id;
+    private String artist;
+    private String title;
+    private String album;
+    private long duration;
     public Song(long id, String artist, String title, String album, long duration) {
         this.id = id;
         this.artist = artist;
@@ -34,6 +34,11 @@ public class Song  {
     public Uri getURI() {
         return ContentUris.withAppendedId(
                 android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id);
+    }
+
+    @Override
+    public String toString(){
+        return title;
     }
 }
 

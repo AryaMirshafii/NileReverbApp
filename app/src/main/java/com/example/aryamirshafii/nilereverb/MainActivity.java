@@ -31,6 +31,8 @@ public class MainActivity extends AppCompatActivity {
     private BluetoothController bluetoothController;
 
     private weatherManager weatherController;
+
+    private PhoneController phoneController;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
         Button closingButton = (Button) findViewById(R.id.playButton);
         bluetoothController = new BluetoothController(getApplicationContext());
+        phoneController = new PhoneController(getApplicationContext());
         // Set a click listener for the popup window close button
         closingButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -52,7 +55,9 @@ public class MainActivity extends AppCompatActivity {
                 //weatherController.getWeather();
                 //bluetoothController.write("Hi arya");
                 //bluetoothController.read();
-                bluetoothController.write("_Arya is so handsome_");
+                //bluetoothController.write("_Arya is so handsome_");
+                System.out.println(phoneController.text("Arya","Hey there"));
+
             }
         });
 

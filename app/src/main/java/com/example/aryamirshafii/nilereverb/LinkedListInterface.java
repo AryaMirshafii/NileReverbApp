@@ -160,5 +160,12 @@ public interface LinkedListInterface<T> {
     public void getPrevious();
 
 
+    /**
+     * A function that shuffles the current item
+     * USes random to iterate through the linked list
+     */
+    public void shuffleCurrent();
+
+
 
 }

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -39,6 +40,10 @@ public class Musicmanager {
 
     private String currentPlayingSong;
 
+    private DoublyLinkedList<Song> songLinkedList;
+
+    private Boolean isShuffling = false;
+
 
 
 
@@ -57,6 +62,8 @@ public class Musicmanager {
         genreMap = new HashMap<>();
         mediaPlayer = new MediaPlayer();
         albumMap = new HashMap<>();
+        songLinkedList = new DoublyLinkedList<>();
+
 
     }
 
@@ -94,8 +101,8 @@ public class Musicmanager {
 
         int genreColumn = cur.getColumnIndex(MediaStore.Audio.Genres.NAME);
 
-        Log.i(TAG, "Title column index: " + String.valueOf(titleColumn));
-        Log.i(TAG, "ID column index: " + String.valueOf(titleColumn));
+        //Log.i(TAG, "Title column index: " + String.valueOf(titleColumn));
+        //Log.i(TAG, "ID column index: " + String.valueOf(titleColumn));
         // add each song to mItems
 
 
@@ -108,7 +115,7 @@ public class Musicmanager {
 
 
         do {
-            Log.i(TAG, "ID: " + cur.getString(idColumn) + " Title: " + cur.getString(titleColumn));
+            //Log.i(TAG, "ID: " + cur.getString(idColumn) + " Title: " + cur.getString(titleColumn));
             Song newSong = new Song(
                     cur.getLong(idColumn),
                     cur.getString(artistColumn),
@@ -132,6 +139,7 @@ public class Musicmanager {
             }else{
                 artistSongs.add(newSong);
             }
+
 
             if(!currentAlbum.equals(cur.getString(albumColumn))){
 
@@ -165,6 +173,8 @@ public class Musicmanager {
     }
 
     public String playSong(String songName){
+        songLinkedList.clear();
+        System.out.println("the size of linked list is " + songLinkedList.size());
         if(currentPlayingSong != null && currentPlayingSong.trim().equals(songName.trim())){
             return "This song is already playing";
         }
@@ -178,22 +188,29 @@ public class Musicmanager {
         Uri theUri = Uri.parse("");
         String displayMessage = "";
         for(Song aSong : mySongs){
-            String songTitle = aSong.title.replaceAll("[^A-Za-z]+", "").toLowerCase();
+            String songTitle = aSong.getTitle().replaceAll("[^A-Za-z]+", "").toLowerCase();
             if(stringSearcher.lcs(songTitle,songName).length() == songName.length()){
                 System.out.println("it is equal");
                 theUri = aSong.getURI();
                 maxLength = 0;
                 playFile((theUri));
 
-                displayMessage = "Playing " + aSong.title;
-                currentPlayingSong = aSong.title;
+                displayMessage = "Playing " + aSong.getTitle();
+                currentPlayingSong = aSong.getTitle();
+                songLinkedList.clear();
+                songLinkedList.addToBack(aSong);
+                System.out.println("Added1 " + aSong.getTitle());
                 return displayMessage;
 
 
             }else if(stringSearcher.lcs(songTitle,songName).length() >maxLength){
+                songLinkedList.clear();
+                songLinkedList.addToBack(aSong);
+                System.out.println("Added2 " + aSong.getTitle());
                 theUri = aSong.getURI();
-                displayMessage = "Playing " + aSong.title;
-                currentPlayingSong = aSong.title;
+                displayMessage = "Playing " + aSong.getTitle();
+
+                currentPlayingSong = aSong.getTitle();
                 maxLength = stringSearcher.lcs(songTitle,songName).length();
             }
 
@@ -243,13 +260,45 @@ public class Musicmanager {
 
 
 
-            mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    Uri theURI = Uri.parse("");
+                    if(isShuffling){
+                        songLinkedList.shuffleCurrent();
 
 
-                @Override public void onPrepared(MediaPlayer player) {
-                    player.start();
+                    }else {
+                        songLinkedList.getNext();
+
+                    }
+
+                    theURI  =  songLinkedList.getCurrent().getURI();
+
+                    //https://stackoverflow.com/questions/7816551/java-lang-illegalstateexception-what-does-it-mean
+                    mp.reset();
+                    try{
+
+                        mp.setDataSource(mContext, theURI);
+                        mp.prepare();
+
+                    }catch (IOException e) {
+                        e.printStackTrace();
+                        Log.e("IO","IO"+e);
+
+                    }
+
+                    mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+
+
+                        @Override public void onPrepared(MediaPlayer player) {
+                            player.start();
+                        }
+
+                    });
+
+
                 }
-
             });
         }
     }
@@ -265,14 +314,12 @@ public class Musicmanager {
         Song[] songs = albumMap.get(key);
 
         for(Song aSong: songs){
-            System.out.println("SONG IS " + aSong.title + "By + " + key + "from the album " + aSong.album);
+            System.out.println("SONG IS " + aSong.getTitle() + "By + " + key + "from the album " + aSong.getAlbum());
         }
 
     }
 
-    private void createGenres(){
 
-    }
 
 
     public String playArtist(String artistName){
@@ -301,47 +348,32 @@ public class Musicmanager {
 
 
         }
+
+
+
         Song[] songs = artistMap.get(artistName);
+        songLinkedList.clear();
 
-        Random random = new Random();
-        Uri randomUri  =  songs[random.nextInt(songs.length )].getURI();
-        playFile(randomUri);
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                Uri theUri  =  songs[random.nextInt(songs.length)].getURI();
+        for(Song someSong: songs){
+            songLinkedList.addToBack(someSong);
+        }
 
 
-                //https://stackoverflow.com/questions/7816551/java-lang-illegalstateexception-what-does-it-mean
-                mp.reset();
-                try{
+        if(isShuffling){
+           songLinkedList.shuffleCurrent();
+        }
 
-                    mp.setDataSource(mContext, theUri);
-                    mp.prepare();
 
-                }catch (IOException e) {
-                    e.printStackTrace();
-                    Log.e("IO","IO"+e);
-
-                }
+        try{
+            playFile(songLinkedList.getCurrent().getURI());
+        }catch (NoSuchElementException e){
+            e.printStackTrace();
+        }
 
 
 
 
-                mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-
-
-                    @Override public void onPrepared(MediaPlayer player) {
-                        player.start();
-                    }
-
-                });
-
-
-            }
-        });
-
-        return "Playing music from " + originalArtistName;
+        return "Playing music by " + songLinkedList.getCurrent().getArtist();
 
     }
 
@@ -356,45 +388,156 @@ public class Musicmanager {
             System.out.println("The key doesnt exist");
             return;
         }
-        Song[] songs = artistMap.get(albumName);
-        Random random = new Random();
-        Uri randomUri  =  songs[random.nextInt(songs.length )].getURI();
-        playFile(randomUri);
-        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                Uri theUri  =  songs[random.nextInt(songs.length)].getURI();
+        Song[] songs = albumMap.get(albumName);
 
 
-                //https://stackoverflow.com/questions/7816551/java-lang-illegalstateexception-what-does-it-mean
-                mp.reset();
-                try{
+        for(Song someSong: songs){
+            songLinkedList.addToBack(someSong);
+        }
 
-                    mp.setDataSource(mContext, theUri);
-                    mp.prepare();
 
-                }catch (IOException e) {
-                    e.printStackTrace();
-                    Log.e("IO","IO"+e);
+        if(isShuffling){
+            songLinkedList.shuffleCurrent();
+        }
 
-                }
+        playFile(songLinkedList.getCurrent().getURI());
+
+    }
+
+    public String playBoth(String searchKey){
+        searchKey =  searchKey.replaceAll("[^A-Za-z]+", "").toLowerCase();
 
 
 
+        if(!artistMap.containsKey(searchKey)){
+            System.out.println("The key doesnt exist");
+            return "Artist not found";
+        }
+        Song[] songs = albumMap.get(searchKey);
 
-                mp.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+
+        for(Song someSong: songs){
+            songLinkedList.addToBack(someSong);
+        }
 
 
-                    @Override public void onPrepared(MediaPlayer player) {
-                        player.start();
-                    }
 
-                });
+
+
+
+
+
+        /**
+         * checking if the name of the group needs a the in front
+         * For example nobody says "play some the beatles" or "play some the rolling stones"
+         * Most would say "play some beatles" or "play some rolling stones"
+         */
+        if(!artistMap.containsKey(searchKey)){
+            System.out.println("The key doesnt exist. Appending the");
+
+            if(!artistMap.containsKey("the" + searchKey)){
+                System.out.println("The key doesnt exist.");
+
+                return "The artist cannot be found";
+            }else {
+                searchKey = "the" + searchKey;
 
 
             }
-        });
+
+
+        }
+
+
+
+        songs = artistMap.get(searchKey);
+
+        for(Song someSong: songs){
+            songLinkedList.addToBack(someSong);
+        }
+
+
+
+
+        if(isShuffling){
+            songLinkedList.shuffleCurrent();
+        }
+
+        playFile(songLinkedList.getCurrent().getURI());
+
+        return "Playing " + songLinkedList.getCurrent().getTitle();
     }
+
+
+
+
+
+    public void enableShuffling(){
+        this.isShuffling = true;
+    }
+
+
+    public void disableShuffling(){
+        this.isShuffling = false;
+    }
+
+
+    /**
+     * plays the next song in the song linked list
+     */
+    public String playNext(){
+        if(songLinkedList.size() > 1){
+            songLinkedList.getNext();
+            playFile(songLinkedList.getCurrent().getURI());
+        }
+
+        return "Playing " + songLinkedList.getCurrent().getTitle();
+    }
+
+
+    /**
+     * plays the previous song in the song linked list
+     */
+    public String playPrevious(){
+        if(songLinkedList.size() > 1){
+            songLinkedList.getPrevious();
+            playFile(songLinkedList.getCurrent().getURI());
+        }
+        return "Playing " + songLinkedList.getCurrent().getTitle();
+    }
+
+
+    /**
+     * Pauses the media player instance
+     */
+    public String pause(){
+        mediaPlayer.pause();
+        return "Player has been paused";
+    }
+
+
+    /**
+     * Starts the media player instance
+     */
+    public String startPlaying(){
+
+        //Accounting for case where songLinked list might be empty
+        if(songLinkedList.isEmpty()){
+            for(Song aSong : mySongs){
+                songLinkedList.addToBack(aSong);
+
+            }
+            playFile(songLinkedList.getCurrent().getURI());
+        } else {
+            mediaPlayer.start();
+        }
+        
+
+        return "Player has been started";
+    }
+
+
+
 
 
 

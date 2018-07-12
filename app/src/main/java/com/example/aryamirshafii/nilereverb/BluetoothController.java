@@ -1,6 +1,7 @@
 package com.example.aryamirshafii.nilereverb;
 
 import android.annotation.SuppressLint;
+
 import android.content.Context;
 import android.util.Log;
 
@@ -8,6 +9,9 @@ import android.util.Log;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDevice;
+import com.polidea.rxandroidble2.internal.operations.CharacteristicLongWriteOperation;
+import com.polidea.rxandroidble2.scan.ScanSettings;
+import com.polidea.rxandroidble2.scan.ScanFilter;
 
 import java.nio.charset.StandardCharsets;
 
@@ -25,6 +29,7 @@ public class BluetoothController {
     private CommandController commandController;
     private String packetString;
     private String address = "C8:DF:84:2A:56:13";
+    private final String deviceName = "NileReverb ";
     private RxBleDevice device;
 
 
@@ -35,6 +40,13 @@ public class BluetoothController {
     private PublishSubject<Boolean> disconnectTriggerSubject = PublishSubject.create();
     private Disposable connectionDisposable;
 
+    private String previousPacketString = "";
+
+    private boolean deviceExists = false;
+
+
+    private Disposable scanSubscription;
+
 
     public BluetoothController(Context appContext){
         this.context = appContext;
@@ -43,13 +55,75 @@ public class BluetoothController {
         uuid =  UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB");
         commandController = new CommandController(context);
         packetString = "";
-        device = rxBleClient.getBleDevice(address);
+        //device = rxBleClient.getBleDevice(address);
+        scan();
+        if(deviceExists){
+            System.out.println("The device exists");
+            scanAndConnect();
+
+        } else{
+
+            System.out.println("The device does not exist");
+        }
+
+
+
+
+
+    }
+
+    private void scanAndConnect(){
+        scanSubscription.dispose();
+        System.out.println("Scanning and connecting");
         connectionObservable = prepareConnectionObservable();
         connect();
+    }
+
+    private void scan(){
+
+        System.out.println("Starting to scan");
+
+        /**
+        if(rxBleClient.getBleDevice(address) != null){
+            device = rxBleClient.getBleDevice(address);
+            System.out.println("The device is found at the address " + address);
+            System.out.println("Stopping scanAndConnect");
+            deviceExists = true;
+            return;
+        }*/
 
 
+        scanSubscription= rxBleClient.scanBleDevices(
+                new ScanSettings.Builder()
+                        //.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+                        .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+                        .build()
 
 
+        )
+                .subscribe(
+                        scanResult -> {
+                            // Process scan result here.
+                            System.out.println("THe device name is:" + scanResult.getBleDevice().getName()  + ":");
+                            if(scanResult.getBleDevice().getName() != null && scanResult.getBleDevice().getName().equals(deviceName)){
+
+                                device = scanResult.getBleDevice();
+                                System.out.println("Found device!");
+                                deviceExists = true;
+                                scanAndConnect();
+
+
+                            }
+
+
+                        },
+                        throwable -> {
+                            System.out.println("An error occured while trying to scan for devices");
+                            throwable.printStackTrace();
+                        }
+                );
+
+        //scanSubscription.dispose();
     }
 
 
@@ -95,11 +169,13 @@ public class BluetoothController {
                     .flatMap(notificationObservable -> notificationObservable) // <-- Notification has been set up, now observe value changes.
                     .subscribe(
                             bytes -> {
-                                System.out.println("Recieving data");
+                                //System.out.println("Recieving data");
                                 String encodedString = new String(bytes, StandardCharsets.UTF_8);
-                                encodedString = encodedString.trim();
+                                encodedString = trimString(encodedString);
+
+
                                 if(!encodedString.equals("")){
-                                    System.out.println("Executing command.....");
+                                    //System.out.println("Executing command.....");
                                     ensurePacket(encodedString);
                                 }
 
@@ -120,6 +196,29 @@ public class BluetoothController {
 
 
     }
+    public String trimString(String string){
+        int length = string.length();
+        if(string.substring(1,2).equals("_") || string.substring(length -2, length -1).equals("_")){
+            System.out.println("Contains _");
+            string = string.trim();
+            return string;
+        }else if(string.substring(0,2).equals("  ") && string.substring(length -2, length).equals("  ")){
+            System.out.println("Double spaces");
+            string = string.substring(1, length -1);
+            return string;
+        }else if (string.substring(0,2).equals("  ")){
+            System.out.println("One space at front");
+            string = string.substring(1, length);
+            return string;
+        }else if(string.substring(length -2, length).equals("  ")){
+            System.out.println("One space at end");
+            string = string.substring(0, length -2 );
+            return string;
+        }
+
+        System.out.println("No need to trim.");
+        return string;
+    }
 
 
 
@@ -127,7 +226,10 @@ public class BluetoothController {
     @SuppressLint("CheckResult")
     public void write(String message){
         System.out.println("Writing " + message);
-
+        if(message.equals("")){
+            read();
+            return;
+        }
         if(message.charAt(0) != '_'){
             message = "_" + message;
         }
@@ -136,13 +238,16 @@ public class BluetoothController {
             message += '_';
         }
         byte[] byteArray = message.getBytes();
+        System.out.println("ByteArray size is + " + byteArray.length);
 
-        if (isConnected()) {
+        if (isConnected() && !connectionDisposable.isDisposed()) {
+
 
             bleConnection.createNewLongWriteBuilder()
                     .setCharacteristicUuid(uuid)
 
                     .setBytes(byteArray)
+                    //.setMaxBatchSize(20) // optional -> default 20 or current MTU
 
                     .build()
                     .subscribe();
@@ -151,6 +256,7 @@ public class BluetoothController {
             read();
 
         }else {
+            connect();
             System.out.println("Tried to write but could not connect");
         }
     }
@@ -169,6 +275,14 @@ public class BluetoothController {
     private void ensurePacket(String commandString){
 
         System.out.println("command string is" + commandString);
+        if(previousPacketString.equals(commandString)){
+            System.out.println("Duplicate command strings detected. Returning");
+            return;
+        }
+
+
+
+        previousPacketString = commandString;
 
         if(commandString.startsWith("_") && commandString.endsWith("_") && commandString.length() > 3){
             //Case 1 complete packet with front and end "_"
@@ -176,11 +290,11 @@ public class BluetoothController {
 
             write(commandController.doCommand(commandString));
 
-        }else if(commandString.startsWith("_")  && packetString.length() == 0){
+        }else if(commandString.startsWith("_") && !commandString.endsWith("_")){
             //Case 2 complete packet with front of "_"
             packetString = commandString;
-            System.out.println("Case 2  "+ packetString);
-        }else if(commandString.endsWith("_")){
+            System.out.println("Case 2"+ packetString);
+        }else if(commandString.endsWith("_") && !commandString.startsWith("_")){
             //Case 2 complete packet with end of "_"
             System.out.println("Case 3");
             packetString += commandString;
@@ -192,6 +306,8 @@ public class BluetoothController {
             System.out.println("Case 4");
             packetString += commandString;
         }
+
+        System.out.println("Current packet is :" + packetString);
     }
 
 

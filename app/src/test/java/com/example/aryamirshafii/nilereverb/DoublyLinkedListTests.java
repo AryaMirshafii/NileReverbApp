@@ -412,4 +412,31 @@ public class DoublyLinkedListTests {
         list.addAtIndex(0, "boop");
         assertNotNull(list.getHead());
     }
+
+    @Test (timeout = TIMEOUT)
+    public void testShuffle() {
+        list.clear();
+        list.addToFront("It's");
+        list.addToFront("coarse");
+        list.addToFront("andOne");
+        list.addToFront("rough");
+        list.addToFront("and");
+
+        list.shuffleCurrent();
+        assertNotNull(list.getCurrent());
+    }
+
+    @Test (timeout = TIMEOUT)
+    public void testAddToBack(){
+        list.clear();
+        list.addToBack("It's");
+        list.addToBack("coarse");
+        list.addToBack("andOne");
+        list.addToBack("rough");
+        list.addToBack("and");
+        assertEquals(list.getHead().getData(), list.getCurrent());
+
+        list.getPrevious();
+        assertEquals("and", list.getCurrent());
+    }
 }

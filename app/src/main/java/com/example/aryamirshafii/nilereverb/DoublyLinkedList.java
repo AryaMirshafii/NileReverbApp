@@ -1,5 +1,8 @@
 package com.example.aryamirshafii.nilereverb;
 
+import java.util.NoSuchElementException;
+import java.util.Random;
+
 /**
 * Doubley linked list that is also circular
 */
@@ -104,12 +107,15 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
         if (tail == null) {
             head = tempnode;
             tail = tempnode;
+            this.currentNode = tempnode;
 
         } else {
             tempnode.setNext(head);
             tempnode.setPrevious(tail);
             tail.setNext(tempnode);
             tail = tempnode;
+            tail.setNext(head);
+            head.setPrevious(tail);
         }
         size++;
     }
@@ -185,8 +191,7 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
         return current.getData();
     }
 
-    @
-    Override
+    @Override
     public T removeFromBack() {
         if (size == 0) {
             return null;
@@ -213,8 +218,7 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
 
 
 
-    @
-    Override
+    @Override
     public T get(int index) {
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException("Error, index is negative" 
@@ -227,8 +231,7 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
         return current.getData();
     }
 
-    @
-    Override
+    @Override
     public Object[] toArray() {
         LinkedListNode<T> current = head;
         Object[] backingArray = (Object[]) new Object[size];
@@ -240,51 +243,65 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
         return backingArray;
     }
 
-    @
-    Override
+    @Override
     public boolean isEmpty() {
 
         return size == 0;
     }
 
-    @
-    Override
+    @Override
     public int size() {
 
         return size;
     }
 
-    @
-    Override
+    @Override
     public void clear() {
         head = null;
         tail = null;
         size = 0;
     }
 
-    @
-    Override
+    @Override
     public LinkedListNode<T> getHead() {
         // DO NOT MODIFY!
         return head;
     }
 
-    @
-    Override
+    @Override
     public LinkedListNode<T> getTail() {
         // DO NOT MODIFY!
         return tail;
     }
-
+    @Override
     public void getNext(){
         currentNode = currentNode.getNext();
     }
+
+
+    @Override
     public void getPrevious(){
         currentNode = currentNode.getPrevious();
     }
 
+
+    @Override
     public T getCurrent(){
+        if(currentNode == null){
+            throw new NoSuchElementException("The current node is null");
+        }
         return currentNode.getData();
+    }
+
+
+    @Override
+    public void shuffleCurrent(){
+        Random countRandom = new Random();
+        int randomNumber = countRandom.nextInt(size -1 );
+
+        for(int i = 0; i < randomNumber; i++){
+            currentNode = currentNode.getNext();
+        }
     }
 
 
