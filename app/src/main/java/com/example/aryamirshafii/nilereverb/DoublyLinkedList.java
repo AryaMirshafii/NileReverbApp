@@ -107,15 +107,22 @@ public class DoublyLinkedList<T> implements LinkedListInterface<T> {
         if (tail == null) {
             head = tempnode;
             tail = tempnode;
+            head.setNext(tail);
+            tail.setNext(head);
             this.currentNode = tempnode;
 
         } else {
+
+
             tempnode.setNext(head);
             tempnode.setPrevious(tail);
             tail.setNext(tempnode);
             tail = tempnode;
             tail.setNext(head);
             head.setPrevious(tail);
+
+
+
         }
         size++;
     }

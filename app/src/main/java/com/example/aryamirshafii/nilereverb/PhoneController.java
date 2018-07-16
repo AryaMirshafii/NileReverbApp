@@ -81,7 +81,7 @@ public class PhoneController {
                 new Intent(),0);
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(phoneNumber, null, message, pi, null);
-        return "Texted " + contactName + ", saying "  + message;
+        return "Texted " + contactName + " Saying " + message;
     }
 
 

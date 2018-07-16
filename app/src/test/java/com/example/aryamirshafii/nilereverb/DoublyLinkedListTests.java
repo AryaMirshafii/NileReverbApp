@@ -439,4 +439,14 @@ public class DoublyLinkedListTests {
         list.getPrevious();
         assertEquals("and", list.getCurrent());
     }
+
+
+    @Test (timeout = TIMEOUT)
+    public void testOneItem(){
+        list.clear();
+        list.addToBack("arya");
+        list.getNext();
+        assertEquals("arya", list.getCurrent());
+
+    }
 }

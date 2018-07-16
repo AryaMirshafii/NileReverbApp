@@ -29,7 +29,8 @@ public class BluetoothController {
     private CommandController commandController;
     private String packetString;
     private String address = "C8:DF:84:2A:56:13";
-    private final String deviceName = "NileReverb ";
+    private final String deviceName = "NileReverb "; // Name has a space at the end due to weird  behavior from AT commands
+
     private RxBleDevice device;
 
 
@@ -83,14 +84,7 @@ public class BluetoothController {
 
         System.out.println("Starting to scan");
 
-        /**
-        if(rxBleClient.getBleDevice(address) != null){
-            device = rxBleClient.getBleDevice(address);
-            System.out.println("The device is found at the address " + address);
-            System.out.println("Stopping scanAndConnect");
-            deviceExists = true;
-            return;
-        }*/
+
 
 
         scanSubscription= rxBleClient.scanBleDevices(
@@ -103,8 +97,8 @@ public class BluetoothController {
         )
                 .subscribe(
                         scanResult -> {
-                            // Process scan result here.
-                            System.out.println("THe device name is:" + scanResult.getBleDevice().getName()  + ":");
+
+                            // System.out.println("THe device name is:" + scanResult.getBleDevice().getName()  + ":");
                             if(scanResult.getBleDevice().getName() != null && scanResult.getBleDevice().getName().equals(deviceName)){
 
                                 device = scanResult.getBleDevice();
@@ -190,14 +184,34 @@ public class BluetoothController {
                     );
 
         }else {
+            connect();
             System.out.println("I am not connected to deviec in reading");
         }
 
 
 
     }
+
+    /**
+     * Trims a string depending on the characters it contains
+     * More specific then the normal trim function
+     * @param string the string that needs to be trimmed
+     * @return
+     */
     public String trimString(String string){
+
+        System.out.println("The trimmed string is:" + string + ":");
+        string = string.trim();
+        string = string.replace("\n", "");
+        string = string.replace("*", " ");
+
+        return string;
+        /**
         int length = string.length();
+        if(length  < 2){
+            return string;
+        }
+
         if(string.substring(1,2).equals("_") || string.substring(length -2, length -1).equals("_")){
             System.out.println("Contains _");
             string = string.trim();
@@ -218,6 +232,7 @@ public class BluetoothController {
 
         System.out.println("No need to trim.");
         return string;
+         */
     }
 
 
@@ -230,6 +245,7 @@ public class BluetoothController {
             read();
             return;
         }
+
         if(message.charAt(0) != '_'){
             message = "_" + message;
         }
@@ -274,11 +290,13 @@ public class BluetoothController {
      */
     private void ensurePacket(String commandString){
 
-        System.out.println("command string is" + commandString);
+        System.out.println("command string is:" + commandString + ":");
         if(previousPacketString.equals(commandString)){
             System.out.println("Duplicate command strings detected. Returning");
             return;
         }
+
+
 
 
 
@@ -307,7 +325,7 @@ public class BluetoothController {
             packetString += commandString;
         }
 
-        System.out.println("Current packet is :" + packetString);
+        System.out.println("Current packet is :" + packetString + ":");
     }
 
 

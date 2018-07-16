@@ -48,13 +48,63 @@ public class CommandController {
         command = command.trim().toLowerCase();
         if(currentCommand.equals(command)){
             System.out.println("Duplicate command detected");
-            return "Duplicate command detected"; // In case of a duplicate command return ""
+            //return "Duplicate command detected"; // In case of a duplicate command return ""
+            return "";
         }
 
 
         System.out.println("doing command" + command);
         currentCommand = command;
-            if(command.contains("play next")){
+
+
+
+        if (command.contains("text ")) {
+            command = command.replace("text", "");
+            command = command.replace("_", "");
+            command = command.trim();
+
+
+
+            Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
+                    .subscribe(() -> {
+                        System.out.println("2 Seconds have elapsed. Resetting current command");
+                        currentCommand = "";
+                    });
+
+            if(command.contains("message")){
+
+                System.out.println("Single value passed into text");
+                command = command.replace("message", "");
+                command = command.trim();
+                return phoneController.text(command);
+            }
+
+            if(countSpaces(command) > 1){
+                command = command.replaceFirst(" ", ",");
+                System.out.println("The replacement command is" + command);
+                String[] splitCommand = command.split(",");
+
+                return phoneController.text(splitCommand[0],splitCommand[1]);
+
+            } else {
+
+                command = command.replace("text", "");
+                command = command.trim();
+                if(phoneController.checkContact(command)){
+                    phoneController.setCurrentContact(command);
+                    return "Ask what would you like to text " + command + "?";
+                }else {
+                    return "This contact does not exist";
+                }
+
+
+            }
+
+
+
+
+
+        }else if(command.contains("play next")){
                 //Accounting for back to back play next requests. Sometimes the bluetooth module
                 //sends duplicate data so the app will make sure that next or previous requests are
                 //executed at least 2 seconds apart.
@@ -138,52 +188,6 @@ public class CommandController {
 
 
             return "UpdateW" + dataManager.getWeather();
-        } else if (command.contains("text ")) {
-                command = command.replace("text", "");
-                command = command.replace("_", "");
-                command = command.trim();
-
-
-
-            Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
-                    .subscribe(() -> {
-                        System.out.println("2 Seconds have elapsed. Resetting current command");
-                        currentCommand = "";
-                    });
-
-                if(command.contains("message")){
-
-                    System.out.println("Single value passed into text");
-                    command = command.replace("message", "");
-                    command = command.trim();
-                    return phoneController.text(command);
-                }
-
-                if(countSpaces(command) > 1){
-                    command = command.replaceFirst(" ", ",");
-                    System.out.println("The replacement command is" + command);
-                    String[] splitCommand = command.split(",");
-
-                    return phoneController.text(splitCommand[0],splitCommand[1]);
-
-                } else {
-
-                    command = command.replace("text", "");
-                    command = command.trim();
-                    if(phoneController.checkContact(command)){
-                        phoneController.setCurrentContact(command);
-                        return "Ask what would you like to text " + command + "?";
-                    }else {
-                        return "This contact does not exist";
-                    }
-
-
-                }
-
-
-
-
-
         }
 
 
