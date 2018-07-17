@@ -447,6 +447,35 @@ public class DoublyLinkedListTests {
         list.addToBack("arya");
         list.getNext();
         assertEquals("arya", list.getCurrent());
+        list.getPrevious();
+        assertEquals("arya", list.getCurrent());
 
     }
+
+    @Test (timeout = TIMEOUT)
+    public void testThreeItems() {
+        list.clear();
+        list.addToBack("one");
+        list.addToBack("two");
+        list.addToBack("three");
+
+        assertEquals("one", list.getCurrent());
+        list.getNext();
+        assertEquals("two", list.getCurrent());
+        list.getPrevious();
+        assertEquals("one", list.getCurrent());
+        list.getNext();
+        list.getNext();
+        assertEquals("three", list.getCurrent());
+        list.getPrevious();
+        assertEquals("two", list.getCurrent());
+        list.getNext();
+        list.getNext();
+        assertEquals("one", list.getCurrent());
+        list.getPrevious();
+        assertEquals("three", list.getCurrent());
+
+
+    }
+
 }
