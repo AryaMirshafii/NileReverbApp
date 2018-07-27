@@ -22,7 +22,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.regex.Pattern;
 
-public class Musicmanager {
+public class Musicmanager implements AudioManager.OnAudioFocusChangeListener{
     final String TAG = "Musicmanager";
     private ContentResolver mContentResolver;
 
@@ -44,6 +44,8 @@ public class Musicmanager {
 
     private Boolean isShuffling = false;
 
+    private AudioManager audioManager;
+
 
 
 
@@ -63,9 +65,37 @@ public class Musicmanager {
         mediaPlayer = new MediaPlayer();
         albumMap = new HashMap<>();
         songLinkedList = new DoublyLinkedList<>();
+        audioManager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+
+        //Checking if music is already playing. If so the app will request focus.
+        if(audioManager.isMusicActive()) {
+            audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN);
+
+
+        }
+        audioManager.startBluetoothSco();
+
 
 
     }
+
+
+    @Override
+    public void onAudioFocusChange(int focusChange) {
+        switch (focusChange) {
+            case AudioManager.AUDIOFOCUS_GAIN:
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+                mediaPlayer.start();
+                break;
+            case AudioManager.AUDIOFOCUS_LOSS:
+            case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+                mediaPlayer.pause();// Pause your media player here
+                break;
+        }
+    }
+
+
 
 
     /**
@@ -175,11 +205,13 @@ public class Musicmanager {
     public String playSong(String songName){
         songLinkedList.clear();
         System.out.println("the size of linked list is " + songLinkedList.size());
+        System.out.println("The song name is :" + songName + ":");
         if(currentPlayingSong != null && currentPlayingSong.trim().equals(songName.trim())){
             return "This song is already playing";
         }
         songName = songName.replaceAll("[^A-Za-z]+", "").toLowerCase();
-        System.out.println("The Song name is" + songName);
+
+        System.out.println("The Song name is" + songName + ":");
         if (mySongs.size() <= 0){
             System.out.println("NO song found");
             return "No songs on device";
@@ -189,7 +221,9 @@ public class Musicmanager {
         String displayMessage = "";
         for(Song aSong : mySongs){
             String songTitle = aSong.getTitle().replaceAll("[^A-Za-z]+", "").toLowerCase();
-            if(stringSearcher.lcs(songTitle,songName).length() == songName.length()){
+
+            if(songTitle.equals(songName)){
+
                 System.out.println("it is equal");
                 theUri = aSong.getURI();
                 maxLength = 0;
@@ -203,7 +237,7 @@ public class Musicmanager {
                 return displayMessage;
 
 
-            }else if(stringSearcher.lcs(songTitle,songName).length() >maxLength){
+            }else if(stringSearcher.lcs(songTitle,songName).length() > maxLength && maxLength <= songName.length() ){
                 songLinkedList.clear();
                 songLinkedList.addToBack(aSong);
                 System.out.println("Added2 " + aSong.getTitle());
@@ -472,6 +506,8 @@ public class Musicmanager {
 
 
 
+
+
     public void enableShuffling(){
         this.isShuffling = true;
     }
@@ -489,9 +525,12 @@ public class Musicmanager {
         if(songLinkedList.size() > 1){
             songLinkedList.getNext();
             playFile(songLinkedList.getCurrent().getURI());
+            return "Playing " + songLinkedList.getCurrent().getTitle();
         }
 
-        return "Playing " + songLinkedList.getCurrent().getTitle();
+        return "What do you want me to play?";
+
+
     }
 
 
@@ -536,6 +575,15 @@ public class Musicmanager {
         return "Player has been started";
     }
 
+
+    /**
+     * A method to play all types of entities, albums, songs, artists ect
+     * @param name
+     */
+    public void play(String name){
+        songLinkedList.clear();
+
+    }
 
 
 

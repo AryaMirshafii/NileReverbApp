@@ -1,10 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    android:background="@drawable/testimage">
+
+
+
+
+
+
+    <pl.droidsonroids.gif.GifImageView
+        android:id="@+id/backGround"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+
+
+        android:layout_alignParentTop="true"
+        android:background="@drawable/appsirifinal"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="72dp" />
+
+    <com.mikhaellopez.circularprogressbar.CircularProgressBar
+        android:layout_width="330dp"
+        android:layout_height="330dp"
+        android:layout_centerInParent="true"
+        app:cpb_background_progressbar_color="@color/clear"
+        app:cpb_background_progressbar_width="20dp"
+        app:cpb_progress="100"
+        app:cpb_progressbar_color="@color/clear"
+        app:cpb_progressbar_width="20dp"
+        tools:layout_editor_absoluteX="15dp"
+        tools:layout_editor_absoluteY="118dp" />
+
 
     <TextView
         android:id="@+id/bluetoothLabel"
@@ -12,37 +43,28 @@
         android:layout_height="45dp"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="31dp"
         android:fontFamily="@font/hkmediumlegacy"
         android:gravity="center"
         android:text="No Bluetooth Available"
-        android:textColor="@color/black"
-        android:textSize="24dp"
-        tools:layout_editor_absoluteX="42dp"
-        tools:layout_editor_absoluteY="16dp" />
+        android:textColor="@color/white"
+        android:textSize="28dp"
+        tools:layout_editor_absoluteX="30dp"
+        tools:layout_editor_absoluteY="36dp" />
+
 
     <Button
         android:id="@+id/playButton"
         android:layout_width="166dp"
         android:layout_height="118dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
         android:text="Button"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
+
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/bluetoothLabel"
+        app:layout_constraintTop_toBottomOf="@+id/bluetoothLabel" />
 
-        />
-
-
-    <pl.droidsonroids.gif.GifImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/appsirifinal"
-        android:id="@+id/backGround"
-
-
-
-
-        />
-
-</android.support.constraint.ConstraintLayout>
+</RelativeLayout>

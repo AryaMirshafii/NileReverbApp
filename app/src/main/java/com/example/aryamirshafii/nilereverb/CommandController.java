@@ -26,6 +26,7 @@ public class CommandController {
         songManager = new Musicmanager(context.getContentResolver(),context);
         songManager.prepare();
         weatherController = new weatherManager(context);
+        weatherController.getWeather();
         dataManager = new dataController(context);
         //weatherController.getWeather();
         phoneController = new PhoneController(context);
@@ -41,12 +42,14 @@ public class CommandController {
     public String doCommand(String command){
 
         System.out.println("Current Command is :" + command);
-
+        command = command.trim();
 
 
 
         command = command.trim().toLowerCase();
         if(currentCommand.equals(command)){
+            System.out.println("The previous command is  " + currentCommand);
+            System.out.println("The current command is  " + command);
             System.out.println("Duplicate command detected");
             //return "Duplicate command detected"; // In case of a duplicate command return ""
             return "";
@@ -108,9 +111,9 @@ public class CommandController {
                 //Accounting for back to back play next requests. Sometimes the bluetooth module
                 //sends duplicate data so the app will make sure that next or previous requests are
                 //executed at least 2 seconds apart.
-                Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
+                Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
                     .subscribe(() -> {
-                        System.out.println("2 Seconds have elapsed");
+                        System.out.println("1 Seconds have elapsed");
                         currentCommand = "";
                     });
             System.out.println("Playing next song");
@@ -120,9 +123,9 @@ public class CommandController {
                 //Accounting for back to back play next requests. Sometimes the bluetooth module
                 //sends duplicate data so the app will make sure that next or previous requests are
                 //executed at least 2 secinds apart.
-                Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
+                Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
                         .subscribe(() -> {
-                            System.out.println("2 Seconds have elapsed");
+                            System.out.println("1 Seconds have elapsed");
                             currentCommand = "";
                         });
 
@@ -145,8 +148,8 @@ public class CommandController {
 
 
 
-        }else if(command.contains(" go ")){
-            if(command.contains(" next ") || command.contains(" forward ")){
+        }else if(command.contains("go")){
+            if(command.contains("next") || command.contains("forward")){
 
                 //Accounting for back to back play next requests. Sometimes the bluetooth module
                 //sends duplicate data so the app will make sure that next or previous requests are
@@ -177,17 +180,35 @@ public class CommandController {
 
                 return songManager.startPlaying();
         } else if(command.contains("weather")){
-            weatherController.getWeather();
-            try {
-                //set time in mili
-                Thread.sleep(3000);
-                
-            }catch (Exception e){
-                e.printStackTrace();
+
+            if(command.contains(" in ")){
+                String locality = command.substring(command.lastIndexOf(" in ") + 1);
+                System.out.println("Getting weather for " + locality);
+                Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
+                        .subscribe(() -> {
+                            System.out.println("Getting the weather");
+                            weatherController.getWeather(locality);
+                        });
+
+                System.out.println("Get weather is : " + dataManager.getWeather());
+                return "UpdateW" + dataManager.getWeather();
+
+            }else {
+                System.out.println("Getting weather");
+                Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
+                        .subscribe(() -> {
+                            System.out.println("Getting the weather");
+                            weatherController.getWeather();
+                        });
+
+                System.out.println("Get weather is : " + dataManager.getWeather());
+                return "UpdateW" + dataManager.getWeather();
             }
 
-
-            return "UpdateW" + dataManager.getWeather();
+        } else if(command.contains("pause") || command.contains("stop")){
+            return songManager.pause();
+        }else if(command.contains("start") || command.contains("resume")){
+            return songManager.startPlaying();
         }
 
 

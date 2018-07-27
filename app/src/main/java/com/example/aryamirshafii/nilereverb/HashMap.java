@@ -63,7 +63,7 @@ public class HashMap<K, V> implements HashMapInterface<K, V> {
                     temppp = check.getValue();
                     check.setValue(value);
 
-                    System.out.println("Already exists!");
+                    //System.out.println("Already exists!");
                     return temppp;
                 }
                 if (check.getNext() != null) {

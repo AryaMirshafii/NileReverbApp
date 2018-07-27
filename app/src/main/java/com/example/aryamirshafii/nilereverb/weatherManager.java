@@ -1,10 +1,12 @@
 package com.example.aryamirshafii.nilereverb;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -13,6 +15,7 @@ import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
 import android.view.WindowManager;
 
 import com.androidnetworking.AndroidNetworking;
@@ -35,7 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-public class weatherManager implements LocationListener{
+public class weatherManager implements LocationListener {
 
     final Context context;
     private Location theLocation;
@@ -45,11 +48,8 @@ public class weatherManager implements LocationListener{
     private dataController DataManager;
 
 
-
-    public weatherManager(Context aContext){
+    public weatherManager(Context aContext) {
         this.context = aContext;
-
-
 
 
         this.locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
@@ -72,23 +72,23 @@ public class weatherManager implements LocationListener{
      */
     private void isLocationEnabled() {
 
-        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
+        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             AlertDialog.Builder alertDialog = new AlertDialog.Builder(context);
             alertDialog.setTitle("Enable Location");
             alertDialog.setMessage("Your locations setting is not enabled. Please enabled it in settings menu.");
-            alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
+            alertDialog.setPositiveButton("Location Settings", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
                     Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     context.startActivity(intent);
                 }
             });
-            alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener(){
-                public void onClick(DialogInterface dialog, int which){
+            alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int which) {
                     dialog.cancel();
                 }
             });
-            AlertDialog alert= alertDialog.create();
+            AlertDialog alert = alertDialog.create();
 
             alert.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
             alert.show();
@@ -97,10 +97,18 @@ public class weatherManager implements LocationListener{
     }
 
 
-
-
-
-    public void getWeather(){
+    public void getWeather() {
+        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
         theLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         if(theLocation == null){
             System.out.println("Location is null");
@@ -143,6 +151,29 @@ public class weatherManager implements LocationListener{
 
 
     }
+
+    public void getWeather(String location){
+
+        location = location.substring(0, 1).toUpperCase() + location.substring(1);
+        String keyRequest = "&appid=e078b8fc5e1bafdfc2758d78ae96b10b";
+        String requestString = "http://api.openweathermap.org/data/2.5/weather?q=" +location.trim() + keyRequest;
+        requestString = requestString.trim();
+        try {
+            getDataFromURL(requestString, location.trim());
+            System.out.println("THe data is");
+            //System.out.println(data);
+        } catch (IOException e) {
+            System.out.println("A IOException occured");
+            e.printStackTrace();
+        } catch (JSONException e) {
+            System.out.println("A JSONException occured");
+            e.printStackTrace();
+        }
+
+
+    }
+
+
 
     public void getDataFromURL(String urlString, String address) throws IOException, JSONException {
 

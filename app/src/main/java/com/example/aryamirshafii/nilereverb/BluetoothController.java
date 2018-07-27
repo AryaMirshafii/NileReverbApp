@@ -2,8 +2,21 @@ package com.example.aryamirshafii.nilereverb;
 
 import android.annotation.SuppressLint;
 
+import android.bluetooth.BluetoothA2dp;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
+import android.os.Build;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Button;
+import android.widget.PopupWindow;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 
 import com.polidea.rxandroidble2.RxBleClient;
@@ -13,12 +26,22 @@ import com.polidea.rxandroidble2.internal.operations.CharacteristicLongWriteOper
 import com.polidea.rxandroidble2.scan.ScanSettings;
 import com.polidea.rxandroidble2.scan.ScanFilter;
 
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Completable;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
+import pl.droidsonroids.gif.GifDrawable;
 
 public class BluetoothController {
 
@@ -48,11 +71,28 @@ public class BluetoothController {
 
     private Disposable scanSubscription;
 
+    private GifDrawable gifDrawable;
+    private TextView bluetoothLabel;
 
-    public BluetoothController(Context appContext){
+    private PopupWindow popupWindow;
+
+    private BluetoothDevice audioBluetooth;
+    private UUID audioUUID = UUID.fromString("0000110A-0000-1000-8000-00805F9B34FB");
+
+    private RxBleConnection.LongWriteOperationBuilder longWriteConnection;
+
+
+
+
+
+
+    public BluetoothController(Context appContext, GifDrawable drawable, TextView btLabel){
         this.context = appContext;
         this.rxBleClient = RxBleClient.create(appContext);
+        this.gifDrawable = drawable;
+        this.bluetoothLabel = btLabel;
 
+        gifDrawable.pause();
         uuid =  UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB");
         commandController = new CommandController(context);
         packetString = "";
@@ -67,10 +107,73 @@ public class BluetoothController {
             System.out.println("The device does not exist");
         }
 
+        if(!checkBothDevices()){
+            System.out.println("The BT SPeaker is not connected");
+            String popupMessage = "Please pair your device with the Nile Reverb's Speaker";
+            showPopup(popupMessage);
+        }else {
+            System.out.println("The BT SPeaker is connected");
+            System.out.println("Create bond is " + audioBluetooth.createBond());
+
+
+
+        }
 
 
 
 
+    }
+
+
+
+
+    private boolean checkBothDevices(){
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        Set<BluetoothDevice> pairedDevices = mBluetoothAdapter.getBondedDevices();
+
+        //List<String> bluetoothList = new ArrayList<>();
+        for(BluetoothDevice btDevice : pairedDevices){
+
+            if(btDevice.getName().equals("BT Speaker")){
+                audioBluetooth = btDevice;
+                return true;
+            }
+
+        }
+
+        return false;
+
+    }
+
+    private void showPopup(String popupText){
+        LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View customView = inflater.inflate(R.layout.music_pair_warning,null);
+        TextView textView = customView.findViewById(R.id.warningText);
+        textView.setText(popupText);
+        popupWindow = new PopupWindow(
+                customView,
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+        // Set an elevation value for popup window
+        // Call requires API level 21
+        if(Build.VERSION.SDK_INT>=21){
+            popupWindow.setElevation(5.0f);
+        }
+
+        Button closingButton = (Button) customView.findViewById(R.id.closePopup);
+
+        // Set a click listener for the popup window close button
+        closingButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // Dismiss the popup window
+                popupWindow.dismiss();
+            }
+        });
+
+
+        //popupWindow.showAtLocation(null, Gravity.CENTER,0,0);
     }
 
     private void scanAndConnect(){
@@ -87,7 +190,7 @@ public class BluetoothController {
 
 
 
-        scanSubscription= rxBleClient.scanBleDevices(
+        scanSubscription = rxBleClient.scanBleDevices(
                 new ScanSettings.Builder()
                         //.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
                         .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
@@ -98,15 +201,18 @@ public class BluetoothController {
                 .subscribe(
                         scanResult -> {
 
-                            // System.out.println("THe device name is:" + scanResult.getBleDevice().getName()  + ":");
+                            //System.out.println("THe device name is:" + scanResult.getBleDevice().getName()  + ":");
                             if(scanResult.getBleDevice().getName() != null && scanResult.getBleDevice().getName().equals(deviceName)){
 
                                 device = scanResult.getBleDevice();
                                 System.out.println("Found device!");
+                                bluetoothLabel.setText("Connected To Device");
                                 deviceExists = true;
                                 scanAndConnect();
 
 
+                            }else {
+                                bluetoothLabel.setText("Device Not Connected");
                             }
 
 
@@ -145,6 +251,10 @@ public class BluetoothController {
                     .subscribe(this::onConnectionReceived, this::onConnectionFailure);
         }
 
+        //longWriteConnection =
+        //        bleConnection.createNewLongWriteBuilder()
+        //                .setCharacteristicUuid(uuid);
+
 
 
 
@@ -171,6 +281,9 @@ public class BluetoothController {
                                 if(!encodedString.equals("")){
                                     //System.out.println("Executing command.....");
                                     ensurePacket(encodedString);
+                                    gifDrawable.start();
+                                }else {
+                                    gifDrawable.pause();
                                 }
 
 
@@ -199,40 +312,27 @@ public class BluetoothController {
      * @return
      */
     public String trimString(String string){
-
-        System.out.println("The trimmed string is:" + string + ":");
+        //string = string.replace("\n", "");
+        string = string.replaceAll("[^\\x00-\\x7F]", "");
+        string = string.replaceAll("[\u0000-\u001f]", "");
         string = string.trim();
-        string = string.replace("\n", "");
         string = string.replace("*", " ");
+        System.out.println("The trimmed string is1:" + string + ":");
 
-        return string;
+
         /**
-        int length = string.length();
-        if(length  < 2){
-            return string;
+        //string = string.trim();
+        if(string.length() > 3 && string.charAt(string.length() -2)== '_'){
+            System.out.println("Created substring");
+            string = string.substring(0,string.length() -1);
         }
-
-        if(string.substring(1,2).equals("_") || string.substring(length -2, length -1).equals("_")){
-            System.out.println("Contains _");
-            string = string.trim();
-            return string;
-        }else if(string.substring(0,2).equals("  ") && string.substring(length -2, length).equals("  ")){
-            System.out.println("Double spaces");
-            string = string.substring(1, length -1);
-            return string;
-        }else if (string.substring(0,2).equals("  ")){
-            System.out.println("One space at front");
-            string = string.substring(1, length);
-            return string;
-        }else if(string.substring(length -2, length).equals("  ")){
-            System.out.println("One space at end");
-            string = string.substring(0, length -2 );
-            return string;
-        }
-
-        System.out.println("No need to trim.");
-        return string;
          */
+        //string = string.replace("\n", "");
+
+
+        return string;
+
+
     }
 
 
@@ -240,6 +340,7 @@ public class BluetoothController {
 
     @SuppressLint("CheckResult")
     public void write(String message){
+        message = message.replace("\n","");
         System.out.println("Writing " + message);
         if(message.equals("")){
             read();
@@ -257,16 +358,21 @@ public class BluetoothController {
         System.out.println("ByteArray size is + " + byteArray.length);
 
         if (isConnected() && !connectionDisposable.isDisposed()) {
+            if(longWriteConnection == null){
 
+                longWriteConnection =
+                       bleConnection.createNewLongWriteBuilder()
+                               .setCharacteristicUuid(uuid);
+            }
 
-            bleConnection.createNewLongWriteBuilder()
-                    .setCharacteristicUuid(uuid)
-
+            longWriteConnection
                     .setBytes(byteArray)
                     //.setMaxBatchSize(20) // optional -> default 20 or current MTU
 
                     .build()
                     .subscribe();
+
+
 
 
             read();
@@ -291,11 +397,20 @@ public class BluetoothController {
     private void ensurePacket(String commandString){
 
         System.out.println("command string is:" + commandString + ":");
+
         if(previousPacketString.equals(commandString)){
+
             System.out.println("Duplicate command strings detected. Returning");
             return;
         }
 
+        if(packetString != null && packetString.length() > 4 && packetString.indexOf("_", 1) > 0){
+            System.out.println("Duplicate underscores detected");
+            int secondUnderscoreIndex = packetString.indexOf("_", 1);
+            packetString = packetString.substring(0, secondUnderscoreIndex + 1);
+
+
+        }
 
 
 
@@ -318,14 +433,31 @@ public class BluetoothController {
             packetString += commandString;
             packetString = packetString.replace("_","");
             write(commandController.doCommand(packetString));
+
             packetString = "";
 
         }else{
             System.out.println("Case 4");
             packetString += commandString;
+            if(isValidCommand(packetString)){
+                write(commandController.doCommand(packetString));
+            }
         }
 
         System.out.println("Current packet is :" + packetString + ":");
+    }
+
+    private void trimEnd(String toTrim){
+
+    }
+    private boolean isValidCommand(String command){
+        if(command.length() < 3){
+            return false;
+        }
+
+        System.out.println("The char at index 1 is :" + command.charAt(0));
+        System.out.println("The char at end  is :" + command.charAt(command.length() -1));
+        return command.startsWith("_") && command.endsWith("_");
     }
 
 
@@ -337,6 +469,7 @@ public class BluetoothController {
         System.out.println("An error occured while reading");
         System.out.println(throwable.getCause());
         throwable.printStackTrace();
+
     }
 
 
@@ -355,8 +488,10 @@ public class BluetoothController {
     private void onConnectionFailure(Throwable throwable) {
         //noinspection ConstantConditions
         System.out.println("An error occured while connecting");
-        System.out.println(throwable.getCause());
+        //System.out.println(throwable.));
+        bluetoothLabel.setText("Device Not Connected");
         throwable.printStackTrace();
+        connect();
     }
 
 
@@ -376,6 +511,7 @@ public class BluetoothController {
         System.out.println("A connection has occurred");
         bleConnection = connection;
         read();
+        gifDrawable.start();
 
     }
 

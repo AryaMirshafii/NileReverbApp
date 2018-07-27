@@ -34,7 +34,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean isRegistered = false;
     private BluetoothController bluetoothController;
 
-    private weatherManager weatherController;
+
 
     private PhoneController phoneController;
 
@@ -50,34 +50,41 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         bluetoothStatusLabel = findViewById(R.id.bluetoothLabel);
 
-        weatherController = new weatherManager(getApplicationContext());
 
 
-        Button closingButton = (Button) findViewById(R.id.playButton);
-        bluetoothController = new BluetoothController(getApplicationContext());
-        phoneController = new PhoneController(getApplicationContext());
-        // Set a click listener for the popup window close button
+
+
+
 
 
         backgroundView = findViewById(R.id.backGround);
         try {
-            gifFromAssets = new GifDrawable( getAssets(), "appsirifinal.gif" );
+            gifFromAssets = new GifDrawable( getAssets(), "appsirifinal.gif");
             backgroundView.setImageDrawable(gifFromAssets);
 
-            gifFromAssets.pause();
+
 
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+        Button closingButton = (Button) findViewById(R.id.playButton);
+        bluetoothController = new BluetoothController(getApplicationContext(), gifFromAssets, bluetoothStatusLabel);
+        phoneController = new PhoneController(getApplicationContext());
 
+
+
+
+        closingButton.setVisibility(View.INVISIBLE);
 
         closingButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                /**
                 if(gifFromAssets != null){
                     gifFromAssets.start();
                 }
+                 */
                 System.out.println("Button Pressed");
                 //weatherController.getWeather();
                 //bluetoothController.write("Hi arya");
@@ -88,12 +95,6 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-
-
-        //UNcomment these
-        //bluetoothController.connect();
-
-
 
     }
 
