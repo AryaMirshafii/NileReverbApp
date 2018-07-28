@@ -1,6 +1,9 @@
 package com.example.aryamirshafii.nilereverb;
 
-public class stringSearch {
+import java.util.Locale;
+import java.util.regex.Pattern;
+
+public class StringController {
 
 
 
@@ -66,5 +69,16 @@ public class stringSearch {
 
         // required longest common substring
         return resultStr;
+    }
+
+
+    public static String capitalize(String text){
+        String c = (text != null)? text.trim() : "";
+        String[] words = c.split(" ");
+        String result = "";
+        for(String w : words){
+            result += (w.length() > 1? w.substring(0, 1).toUpperCase(Locale.US) + w.substring(1, w.length()).toLowerCase(Locale.US) : w) + " ";
+        }
+        return result.trim();
     }
 }

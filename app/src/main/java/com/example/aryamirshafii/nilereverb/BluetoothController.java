@@ -19,6 +19,10 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 
+import com.androidnetworking.AndroidNetworking;
+import com.androidnetworking.common.Priority;
+import com.androidnetworking.error.ANError;
+import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.polidea.rxandroidble2.RxBleClient;
 import com.polidea.rxandroidble2.RxBleConnection;
 import com.polidea.rxandroidble2.RxBleDevice;
@@ -26,12 +30,16 @@ import com.polidea.rxandroidble2.internal.operations.CharacteristicLongWriteOper
 import com.polidea.rxandroidble2.scan.ScanSettings;
 import com.polidea.rxandroidble2.scan.ScanFilter;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -49,7 +57,7 @@ public class BluetoothController {
     private Context context;
 
     private UUID uuid;
-    private CommandController commandController;
+
     private String packetString;
     private String address = "C8:DF:84:2A:56:13";
     private final String deviceName = "NileReverb "; // Name has a space at the end due to weird  behavior from AT commands
@@ -86,15 +94,45 @@ public class BluetoothController {
 
 
 
+
+
+
+    //The variables from the original CommandController class
+    private Musicmanager songManager;
+    private String nowPlayingSongName;
+    private String currentCommand = "";
+    private weatherManager weatherController;
+    private dataController dataManager;
+    private PhoneController phoneController;
+    private StringController stringController;
+
+
+
     public BluetoothController(Context appContext, GifDrawable drawable, TextView btLabel){
         this.context = appContext;
         this.rxBleClient = RxBleClient.create(appContext);
         this.gifDrawable = drawable;
         this.bluetoothLabel = btLabel;
 
+
+
+
+        songManager = new Musicmanager(context.getContentResolver(),context);
+        songManager.prepare();
+        weatherController = new weatherManager(context);
+        weatherController.getWeather();
+        dataManager = new dataController(context);
+        //weatherController.getWeather();
+        phoneController = new PhoneController(context);
+        stringController = new StringController();
+
+
+
+
+
         gifDrawable.pause();
         uuid =  UUID.fromString("0000FFE1-0000-1000-8000-00805F9B34FB");
-        commandController = new CommandController(context);
+
         packetString = "";
         //device = rxBleClient.getBleDevice(address);
         scan();
@@ -123,6 +161,8 @@ public class BluetoothController {
 
 
     }
+
+
 
 
 
@@ -421,7 +461,7 @@ public class BluetoothController {
             //Case 1 complete packet with front and end "_"
             System.out.println("Case 1");
 
-            write(commandController.doCommand(commandString));
+            write(doCommand(commandString));
 
         }else if(commandString.startsWith("_") && !commandString.endsWith("_")){
             //Case 2 complete packet with front of "_"
@@ -432,7 +472,7 @@ public class BluetoothController {
             System.out.println("Case 3");
             packetString += commandString;
             packetString = packetString.replace("_","");
-            write(commandController.doCommand(packetString));
+            write(doCommand(packetString));
 
             packetString = "";
 
@@ -440,7 +480,7 @@ public class BluetoothController {
             System.out.println("Case 4");
             packetString += commandString;
             if(isValidCommand(packetString)){
-                write(commandController.doCommand(packetString));
+                write(doCommand(packetString));
             }
         }
 
@@ -514,6 +554,275 @@ public class BluetoothController {
         gifDrawable.start();
 
     }
+
+
+
+
+
+
+
+
+
+    /**
+     * A simple function to execute commands
+     * always used when the nile reverb sends a command to the phone
+     * @param command the command to execute
+     */
+    @SuppressLint("CheckResult")
+    public String doCommand(String command){
+
+        System.out.println("Current Command is :" + command);
+        command = command.trim();
+
+
+
+        command = command.trim().toLowerCase();
+        if(currentCommand.equals(command)){
+            System.out.println("The previous command is  " + currentCommand);
+            System.out.println("The current command is  " + command);
+            System.out.println("Duplicate command detected");
+            //return "Duplicate command detected"; // In case of a duplicate command return ""
+            return "";
+        }
+
+
+        System.out.println("doing command" + command);
+        currentCommand = command;
+
+
+
+        if (command.contains("text ")) {
+            command = command.replace("text", "");
+            command = command.replace("_", "");
+            command = command.trim();
+
+
+
+            Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
+                    .subscribe(() -> {
+                        System.out.println("2 Seconds have elapsed. Resetting current command");
+                        currentCommand = "";
+                    });
+
+            if(command.contains("message")){
+
+                System.out.println("Single value passed into text");
+                command = command.replace("message", "");
+                command = command.trim();
+                return phoneController.text(command);
+            }
+
+            if(countSpaces(command) > 1){
+                command = command.replaceFirst(" ", ",");
+                System.out.println("The replacement command is" + command);
+                String[] splitCommand = command.split(",");
+
+                return phoneController.text(splitCommand[0],splitCommand[1]);
+
+            } else {
+
+                command = command.replace("text", "");
+                command = command.trim();
+                if(phoneController.checkContact(command)){
+                    phoneController.setCurrentContact(command);
+                    return "Ask what would you like to text " + command + "?";
+                }else {
+                    return "This contact does not exist";
+                }
+
+
+            }
+
+
+
+
+
+        }else if(command.contains("play next")){
+            //Accounting for back to back play next requests. Sometimes the bluetooth module
+            //sends duplicate data so the app will make sure that next or previous requests are
+            //executed at least 2 seconds apart.
+            Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
+                    .subscribe(() -> {
+                        System.out.println("1 Seconds have elapsed");
+                        currentCommand = "";
+                    });
+            System.out.println("Playing next song");
+            return songManager.playNext();
+        } else if(command.contains("play previous")) {
+
+            //Accounting for back to back play next requests. Sometimes the bluetooth module
+            //sends duplicate data so the app will make sure that next or previous requests are
+            //executed at least 2 secinds apart.
+            Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
+                    .subscribe(() -> {
+                        System.out.println("1 Seconds have elapsed");
+                        currentCommand = "";
+                    });
+
+            System.out.println("Playing previous song");
+            return songManager.playPrevious();
+        }
+        if(command.contains("play ")){
+            if(command.contains(" some ") && command.contains("play ")){
+                command = command.replace("play","");
+                command = command.replace("some","");
+                return songManager.playArtist(command.trim());
+
+            }else if(nowPlayingSongName == null || !command.contains(nowPlayingSongName.toLowerCase().trim())) {
+                command = command.replace("play","");
+                nowPlayingSongName = command;
+                System.out.println("Playing " + nowPlayingSongName);
+                return songManager.playSong(command);
+
+            }
+
+
+
+        }else if(command.contains("go")){
+            if(command.contains("next") || command.contains("forward")){
+
+                //Accounting for back to back play next requests. Sometimes the bluetooth module
+                //sends duplicate data so the app will make sure that next or previous requests are
+                //executed at least 2 seconds apart.
+                Completable.timer(4, TimeUnit.SECONDS, Schedulers.computation())
+                        .subscribe(() -> {
+                            System.out.println("2 Seconds have elapsed");
+                            currentCommand = "";
+                        });
+
+                return songManager.playNext();
+            } else if(command.contains("previous") || command.contains("back")){
+
+
+
+                return songManager.playPrevious();
+            }
+
+
+        }else if(command.contains("pause")){
+
+
+
+            return songManager.pause();
+
+        } else if(command.contains("start") || command.contains("continue")){
+
+
+            return songManager.startPlaying();
+        } else if(command.contains("weather")){
+
+            if(command.contains(" in ")){
+
+                String locality = command.substring(command.lastIndexOf(" in ") + 4);
+                locality = locality.replace("_","");
+                System.out.println("Getting weather for " + locality);
+
+
+                try {
+                    locality = stringController.capitalize(locality);
+                    getDataFromURL(weatherController.getWeather(locality), locality);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+
+
+
+                return "";
+                //return "UpdateW" + dataManager.getWeather();
+
+            }else {
+                System.out.println("Getting weather");
+
+
+                try {
+                    getDataFromURL(weatherController.getWeather(), weatherController.getLocationString());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                //System.out.println("Get weather is :);
+                return "";
+            }
+
+        } else if(command.contains("pause") || command.contains("stop")){
+            return songManager.pause();
+        }else if(command.contains("start") || command.contains("resume")){
+            return songManager.startPlaying();
+        }
+
+
+        return "Invalid request";
+    }
+
+    private int countSpaces(String toAnalyze){
+        int count =0;
+
+        for(int i=0;i<toAnalyze.length();i++){
+            if(Character.isWhitespace(toAnalyze.charAt(i))){
+                count+=1;
+            }
+        }
+
+        return count;
+    }
+
+    private void getDataFromURL(String urlString, String address) throws IOException, JSONException {
+        System.out.println("The entered address is :" + address + ":");
+
+        AndroidNetworking.get(urlString)
+                .addPathParameter("pageNumber", "0")
+                .addQueryParameter("limit", "3")
+                .addHeaders("token", "1234")
+                .setTag("test")
+                .setPriority(Priority.LOW)
+                .build()
+                .getAsJSONObject(new JSONObjectRequestListener() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        //System.out.println("The data is " + response);
+                        try {
+                            System.out.println("The data is " + response.get("main").toString());
+                            String first = Arrays.asList(response.get("main").toString()
+                                    .split(","))
+                                    .get(0);
+                            System.out.println("THe first string is " + first);
+                            first = first.replace("{" + "\"" + "temp" + "\"" + ":","");
+                            System.out.println("THe trimmed string is " + first);
+
+
+                            Double finalTemp =  ((Double.parseDouble(first) *  9/5) - 459.6700);
+
+
+
+                            System.out.println("THe temp  is " + finalTemp);
+                            System.out.println("The address for the weather is" + address);
+
+                            write("UpdateW" + Integer.toString(finalTemp.intValue()) + "," + address);
+
+
+
+
+
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public void onError(ANError anError) {
+                        System.out.println("An error occured");
+                        anError.printStackTrace();
+                    }
+                });
+    }
+
+
+
 
 
 

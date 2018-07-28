@@ -30,7 +30,7 @@ public class Musicmanager implements AudioManager.OnAudioFocusChangeListener{
 
     private Context mContext;
 
-    private stringSearch stringSearcher;
+    private StringController stringSearcher;
     private ArrayList<String> genres;
     private ArrayList<String> artists;
     private HashMap<String, Song[]> artistMap;
@@ -57,7 +57,7 @@ public class Musicmanager implements AudioManager.OnAudioFocusChangeListener{
     public Musicmanager(ContentResolver cr, Context context) {
         this.mContentResolver = cr;
         this.mContext = context;
-        stringSearcher = new stringSearch();
+        stringSearcher = new StringController();
         genres = new ArrayList<>();
         artists = new ArrayList<>();
         artistMap = new HashMap<>();

@@ -37,6 +37,10 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.Completable;
+import io.reactivex.schedulers.Schedulers;
 
 public class weatherManager implements LocationListener {
 
@@ -46,8 +50,11 @@ public class weatherManager implements LocationListener {
     private LocationListener locationListener;
 
     private dataController DataManager;
+    private String locationString;
+    private Geocoder geocoder;
 
 
+    @SuppressLint("CheckResult")
     public weatherManager(Context aContext) {
         this.context = aContext;
 
@@ -61,8 +68,16 @@ public class weatherManager implements LocationListener {
         //bluetoothController = new BluetoothController(context);
         DataManager = new dataController(context);
         getWeather();
+        Completable.timer(6, TimeUnit.SECONDS, Schedulers.computation())
+                .subscribe(() -> {
+                    System.out.println("The location string is found to be :" + locationString);
+
+                });
 
 
+    }
+    public String getLocationString(){
+        return locationString;
     }
 
 
@@ -96,8 +111,7 @@ public class weatherManager implements LocationListener {
 
     }
 
-
-    public void getWeather() {
+    public String getWeather(){
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -107,160 +121,62 @@ public class weatherManager implements LocationListener {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
-            return;
+            return null;
         }
-        theLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
         if(theLocation == null){
             System.out.println("Location is null");
             theLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-            return;
+
+        }
+        Double latitude = theLocation.getLatitude();
+        Double longitude = theLocation.getLongitude();
+
+        geocoder =  new Geocoder(context, Locale.getDefault());
+
+        List<Address> addresses = null;
+        try {
+            addresses = geocoder.getFromLocation(latitude, longitude, 1);
+        } catch (IOException e) {
+
+            e.printStackTrace();
         }
 
+        if (addresses != null) {
 
+            String city = addresses.get(0).getLocality();
+            locationString = city;
+            System.out.println("The city is: " + city );
 
-        //Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        System.out.println("The location is " + theLocation);
+            String keyRequest = "&appid=e078b8fc5e1bafdfc2758d78ae96b10b";
+            String requestString = "http://api.openweathermap.org/data/2.5/weather?q=" + city.trim() + keyRequest;
+            return requestString;
+        }else {
+            System.out.println("The city addresses is null ");
+        }
 
-        getCityName(theLocation, new OnGeocoderFinishedListener() {
-            @Override
-            public void onFinished(List<Address> results) {
-                if(results.size() < 0){
-                    return;
-                }
-                Address address = results.get(0);
-                System.out.println(address.getLocality());
-                //key = e078b8fc5e1bafdfc2758d78ae96b10b
-                String keyRequest = "&appid=e078b8fc5e1bafdfc2758d78ae96b10b";
-                String requestString = "http://api.openweathermap.org/data/2.5/weather?q=" + address.getLocality().trim() + keyRequest;
-                requestString = requestString.trim();
-                try {
-                    getDataFromURL(requestString, address.getLocality().trim());
-                    System.out.println("THe data is");
-                    //System.out.println(data);
-                } catch (IOException e) {
-                    System.out.println("A IOException occured");
-                    e.printStackTrace();
-                } catch (JSONException e) {
-                    System.out.println("A JSONException occured");
-                    e.printStackTrace();
-                }
-
-
-            }
-        });
-
+        return null;
 
     }
 
-    public void getWeather(String location){
+
+
+
+    public String getWeather(String location){
 
         location = location.substring(0, 1).toUpperCase() + location.substring(1);
         String keyRequest = "&appid=e078b8fc5e1bafdfc2758d78ae96b10b";
         String requestString = "http://api.openweathermap.org/data/2.5/weather?q=" +location.trim() + keyRequest;
         requestString = requestString.trim();
-        try {
-            getDataFromURL(requestString, location.trim());
-            //System.out.println("THe data is ");
-            //System.out.println(data);
-        } catch (IOException e) {
-            System.out.println("A IOException occured");
-            e.printStackTrace();
-        } catch (JSONException e) {
-            System.out.println("A JSONException occured");
-            e.printStackTrace();
-        }
+        locationString = location.trim();
+        return requestString;
+
 
 
     }
 
 
 
-    public void getDataFromURL(String urlString, String address) throws IOException, JSONException {
-        System.out.println("The entered address is :" + address + ":");
-
-        AndroidNetworking.get(urlString)
-                .addPathParameter("pageNumber", "0")
-                .addQueryParameter("limit", "3")
-                .addHeaders("token", "1234")
-                .setTag("test")
-                .setPriority(Priority.LOW)
-                .build()
-                .getAsJSONObject(new JSONObjectRequestListener() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        //System.out.println("The data is " + response);
-                        try {
-                            System.out.println("The data is " + response.get("main").toString());
-                            String first = Arrays.asList(response.get("main").toString()
-                                    .split(","))
-                                    .get(0);
-                            System.out.println("THe first string is " + first);
-                            first = first.replace("{" + "\"" + "temp" + "\"" + ":","");
-                            System.out.println("THe trimmed string is " + first);
-
-
-                            Double finalTemp =  ((Double.parseDouble(first) *  9/5) - 459.6700);
-
-
-
-                            System.out.println("THe temp  is " + finalTemp);
-
-
-
-
-
-
-                            //weatherManager.this.bluetoothController.write("_UpdateW" + Fahrenheit +"_");
-                            DataManager.setWeather(
-                                    Integer.toString(finalTemp.intValue())
-                                    + "," + address
-                            );
-
-
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    public void onError(ANError anError) {
-                        System.out.println("An error occured");
-                        anError.printStackTrace();
-                    }
-                });
-    }
-
-
-
-
-
-
-
-
-    @SuppressLint("StaticFieldLeak")
-    private void getCityName(final Location location, final OnGeocoderFinishedListener listener) {
-        new AsyncTask<Void, Integer, List<Address>>() {
-            @Override
-            protected List<Address> doInBackground(Void... arg0) {
-                Geocoder coder = new Geocoder(context, Locale.ENGLISH);
-                List<Address> results = null;
-                try {
-                    results = coder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                } catch (IOException e) {
-                    // nothing
-                }
-                return results;
-            }
-
-            @Override
-            protected void onPostExecute(List<Address> results) {
-                if (results != null && listener != null) {
-                    listener.onFinished(results);
-                }
-            }
-        }.execute();
-    }
 
     @Override
     public void onLocationChanged(Location location) {
