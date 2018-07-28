@@ -160,7 +160,7 @@ public class weatherManager implements LocationListener {
         requestString = requestString.trim();
         try {
             getDataFromURL(requestString, location.trim());
-            System.out.println("THe data is");
+            //System.out.println("THe data is ");
             //System.out.println(data);
         } catch (IOException e) {
             System.out.println("A IOException occured");
@@ -176,6 +176,7 @@ public class weatherManager implements LocationListener {
 
 
     public void getDataFromURL(String urlString, String address) throws IOException, JSONException {
+        System.out.println("The entered address is :" + address + ":");
 
         AndroidNetworking.get(urlString)
                 .addPathParameter("pageNumber", "0")

@@ -182,13 +182,16 @@ public class CommandController {
         } else if(command.contains("weather")){
 
             if(command.contains(" in ")){
-                String locality = command.substring(command.lastIndexOf(" in ") + 1);
+
+                String locality = command.substring(command.lastIndexOf(" in ") + 4);
                 System.out.println("Getting weather for " + locality);
                 Completable.timer(1, TimeUnit.SECONDS, Schedulers.computation())
                         .subscribe(() -> {
                             System.out.println("Getting the weather");
                             weatherController.getWeather(locality);
+
                         });
+
 
                 System.out.println("Get weather is : " + dataManager.getWeather());
                 return "UpdateW" + dataManager.getWeather();
